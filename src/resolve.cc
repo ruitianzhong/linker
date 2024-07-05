@@ -21,14 +21,18 @@ void resolveSymbols(std::vector<ObjectFile> &allObjects) {
     }
 }
 
+static bool isStrong(Symbol *sym)
+{
+    return sym->bind == STB_GLOBAL && sym->index != SHN_UNDEF && sym->index != SHN_COMMON;
+}
+
+static bool isWeak(Symbol * sym){
+    return sym->index == SHN_COMMON;
+}
+
 static bool isWeakOrStrong(Symbol *sym)
 {
-    if (sym->type == STB_GLOBAL && sym->index != SHN_UNDEF && sym->index != SHN_COMMON)
-        return true;
-    if (sym->type == STB_WEAK && sym->index == SHN_COMMON)
-        return true; 
-
-    return false;
+    return isStrong(sym) || isWeak(sym);
 }
 
 /* bind each undefined reference (reloc entry) to the exact valid symbol table entry
@@ -51,19 +55,20 @@ int callResolveSymbols(std::vector<ObjectFile> &allObjects)
         {
             if (um.find(sym.name) == um.end())
             {
-                if (isWeakOrStrong(&sym))
+                if (isWeakOrStrong(&sym)){
                     um.insert({sym.name, &sym});
+                    }
             }
             else
             {
-                if (sym.type == STB_WEAK)
+                if (isWeak(&sym))
                 {
                     continue;
                 }
-                else if (sym.type == STB_GLOBAL)
+                else if (isStrong(&sym))
                 {
                     Symbol *cur = um[sym.name];
-                    if (cur->type == STB_GLOBAL)
+                    if (cur->bind == STB_GLOBAL)
                     {
                         errSymName = cur->name;
                         return MULTI_DEF;
@@ -71,7 +76,7 @@ int callResolveSymbols(std::vector<ObjectFile> &allObjects)
                 }
                 else
                 {
-                    std::cout << "Unexpected branch";
+                    // do nothing for now
                 }
             }
         }
