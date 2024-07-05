@@ -21,21 +21,26 @@ void handleRela(std::vector<ObjectFile> &allObject, ObjectFile &mergedObject, bo
     {
         std::cout << allObject[0].relocTable.size() << std::endl;
         std::cout << "[Relocation] Symbol name " << re.name << std::endl;
-
+        std::cout << std::hex << textAddr << std::endl;
         uint64_t addr;
         uint32_t diff;
         switch (re.type)
         {
         case R_X86_64_PC32:
-            addr = re.offset + textAddr + uint64_t(mergedObject.baseAddr);
+        case R_X86_64_PLT32:
+            addr = re.offset + textOff + uint64_t(mergedObject.baseAddr);
             std::cout << "ready to write on addr " << std::hex << addr << std::endl;
             diff = re.sym->value - (re.offset + textAddr) + re.addend;
             std::cout << "diff is " << diff << std::endl;
             *reinterpret_cast<uint32_t *>(addr) = diff;
             break;
         case R_X86_64_32:
+            addr = re.offset + textOff + uint64_t(mergedObject.baseAddr);
+            diff = re.sym->value + re.addend;
+            *reinterpret_cast<uint32_t *>(addr) = diff;
             break;
         default:
+            std::cout << "unexpected type" << std::endl;
             break;
         }
     }
